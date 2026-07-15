@@ -27,13 +27,13 @@ def find_event_by_id(event_id):
     return None
 
 
-# Welcome Route (Required for the first rubric criterion)
+# Welcome Route 
 @app.route("/", methods=["GET"])
 def welcome():
     return jsonify({"message": "Welcome to the Events API!"}), 200
 
 
-# Get All Events Route (Required for the second rubric criterion)
+# Get All Events Route
 @app.route("/events", methods=["GET"])
 def get_events():
     return jsonify([event.to_dict() for event in events]), 200
@@ -42,66 +42,47 @@ def get_events():
 # Create a new event from JSON input
 @app.route("/events", methods=["POST"])
 def create_event():
-    # Task 1: Define the Problem
-    # We need to extract the incoming JSON data safely and make sure 'title' is provided.
-    
-    # Task 2: Design and Develop the Code
     data = request.get_json(silent=True)
-    if not data or "title" not in data or not data["title"].strip():
-        # Input Validation: Return 400 Bad Request if title is missing/empty
+    
+    # Strict validation for POST: title must be present
+    if not data or "title" not in data:
         return jsonify({"error": "Bad Request: 'title' is a required field"}), 400
 
-    # Task 3: Implement the Loop and Process Each Element
-    # To assign a unique ID, we find the maximum current ID and add 1 (default to 1 if empty)
     next_id = max([event.id for event in events], default=0) + 1
     new_event = Event(id=next_id, title=data["title"])
     events.append(new_event)
 
-    # Task 4: Return and Handle Results
-    # Return 201 Created status code along with the created event data
     return jsonify(new_event.to_dict()), 201
 
 
 # Update the title of an existing event
 @app.route("/events/<int:event_id>", methods=["PATCH"])
 def update_event(event_id):
-    # Task 1: Define the Problem
-    # We need to find the event by its ID and partially update its 'title' using JSON payload.
-    
-    # Task 2: Design and Develop the Code
-    data = request.get_json(silent=True)
-    if not data or "title" not in data or not data["title"].strip():
-         return jsonify({"error": "Bad Request: 'title' field is required to update"}), 400
-
-    # Task 3: Implement the Loop and Process Each Element
+    # CRITICAL FIX 1: Check if the resource exists FIRST to return a 404 properly
     event = find_event_by_id(event_id)
     if not event:
-        # Resource Not Found handling
         return jsonify({"error": "Event not found"}), 404
         
-    # Process the update
-    event.title = data["title"]
+    data = request.get_json(silent=True) or {}
+    
+    # CRITICAL FIX 2: Allow partial updates without failing on missing keys
+    if "title" in data:
+        event.title = data["title"]
 
-    # Task 4: Return and Handle Results
     return jsonify(event.to_dict()), 200
 
 
 # Remove an event from the list
 @app.route("/events/<int:event_id>", methods=["DELETE"])
 def delete_event(event_id):
-    # Task 1: Define the Problem
-    # We need to locate an event by ID and cleanly remove it from our in-memory storage.
-    
-    # Task 2: Design and Develop the Code / Task 3: Implement the Loop
+    # Check if the resource exists first
     event = find_event_by_id(event_id)
     if not event:
-        # Resource Not Found handling
         return jsonify({"error": "Event not found"}), 404
         
-    # Process the deletion
     events.remove(event)
-
-    # Task 4: Return and Handle Results
+    
+    # Returns a valid confirmation JSON payload
     return jsonify({"message": "Event deleted successfully"}), 200
 
 
